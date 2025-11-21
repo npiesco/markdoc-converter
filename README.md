@@ -112,7 +112,7 @@ The editor supports all standard Markdown syntax:
 1. Numbered lists
 2. Second item
 
-[Link text](https://example.com)
+[Link text](https://github.com)
 
 > Blockquotes for important notes
 
