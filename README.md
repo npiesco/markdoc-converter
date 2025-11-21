@@ -71,8 +71,8 @@ Once installed, the app works completely offline - no internet required!
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/mark-my-words-down.git
-cd mark-my-words-down
+git clone https://github.com/npiesco/markdoc-converter.git
+cd markdoc-converter
 
 # Install dependencies
 npm install
@@ -145,9 +145,9 @@ The exported Word document will show language labels above each code block.
 Links are automatically converted to clickable hyperlinks in Word:
 
 ```markdown
-Visit the [documentation](https://example.com/docs) for more information.
+Visit the [documentation](https://github.com/npiesco/markdoc-converter#readme) for more information.
 
-Check out our [GitHub repository](https://github.com/example/repo).
+Check out our [GitHub repository](https://github.com/npiesco/markdoc-converter).
 ```
 
 ### Exporting to Word
@@ -252,6 +252,6 @@ Contributions welcome! Please follow these guidelines:
 
 ---
 
-**Questions?** Open an [issue](https://github.com/yourusername/mark-my-words-down/issues) or submit a pull request.
+**Questions?** Open an [issue](https://github.com/npiesco/markdoc-converter/issues) or submit a pull request.
 
 **Like this project?** Star the repo and share with your team!

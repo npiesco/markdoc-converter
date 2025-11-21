@@ -11,7 +11,7 @@ const DEFAULT_CONTENT = `# Project Proposal
 ## Executive Summary
 This document outlines the strategy for the upcoming **Q4 Launch**. We aim to leverage *innovative technologies* to streamline our workflow.
 
-For more information, visit our [documentation](https://example.com/docs) or check out the [GitHub repository](https://github.com/example/project).
+For more information, check out the [GitHub repository](https://github.com/npiesco/markdoc-converter) or view the [README documentation](https://github.com/npiesco/markdoc-converter#readme).
 
 ### Key Objectives
 1. Increase efficiency by 25%
