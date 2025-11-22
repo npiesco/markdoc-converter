@@ -87,7 +87,6 @@ const markdownToDocx = async (markdown: string): Promise<Paragraph[]> => {
               new Paragraph({
                 children: itemRuns,
                 bullet: token.ordered ? undefined : { level: 0 },
-                numbering: token.ordered ? { reference: 'default', level: 0 } : undefined,
               })
             );
           }
@@ -95,7 +94,7 @@ const markdownToDocx = async (markdown: string): Promise<Paragraph[]> => {
         break;
 
       case 'table':
-        // Create table
+        // Create table - Tables go directly in paragraphs array, not inside Paragraph
         if (token.header && token.rows) {
           const headerCells = token.header.map(
             (cell: any) =>
@@ -118,15 +117,11 @@ const markdownToDocx = async (markdown: string): Promise<Paragraph[]> => {
               })
           );
 
+          // @ts-ignore - Table is a valid section child
           paragraphs.push(
-            new Paragraph({
-              children: [
-                // @ts-ignore - Table is valid child
-                new Table({
-                  rows: [headerRow, ...bodyRows],
-                  width: { size: 100, type: WidthType.PERCENTAGE },
-                }),
-              ],
+            new Table({
+              rows: [headerRow, ...bodyRows],
+              width: { size: 100, type: WidthType.PERCENTAGE },
             })
           );
         }
