@@ -94,7 +94,16 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
       });
       
       marked.use({ renderer });
-      contentRef.current.innerHTML = marked.parse(content);
+      
+      // Handle async parse
+      const parseContent = async () => {
+        const html = await marked.parse(content);
+        if (contentRef.current) {
+          contentRef.current.innerHTML = html;
+        }
+      };
+      
+      parseContent();
     }
   }, [content]);
 
