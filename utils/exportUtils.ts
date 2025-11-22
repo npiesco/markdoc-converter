@@ -49,11 +49,12 @@ export const exportToWord = (markdown: string, fileName: string) => {
     return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
   };
   
-  // Handle paragraphs - let Word use default spacing
+  // Handle paragraphs with proper Word spacing
   // @ts-ignore
   renderer.paragraph = (entry: any) => {
     const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    return `<p>${text}</p>`;
+    // Use mso-specific styles for Word paragraph spacing
+    return `<p style="margin: 0; mso-para-margin-bottom: 1.0em; line-height: 115%;">${text}</p>`;
   };
   
   // Handle both old (string args) and new (object arg) Marked signatures
