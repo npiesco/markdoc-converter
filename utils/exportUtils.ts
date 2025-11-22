@@ -64,14 +64,6 @@ export const exportToWord = async (markdown: string, fileName: string) => {
     return `<em style="font-style: italic;">${text}</em>`;
   };
   
-  // Handle paragraphs with proper Word spacing
-  // @ts-ignore
-  renderer.paragraph = (entry: any) => {
-    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    // Use mso-specific styles for Word paragraph spacing
-    return `<p style="margin: 0; mso-para-margin-bottom: 1.0em; line-height: 115%;">${text}</p>`;
-  };
-  
   // Handle both old (string args) and new (object arg) Marked signatures
   // @ts-ignore
   renderer.code = (entry: any, langIfOld?: string) => {
