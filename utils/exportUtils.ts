@@ -4,16 +4,46 @@ export const exportToWord = (markdown: string, fileName: string) => {
   // Create a custom renderer to handle Code Blocks with Language Labels and Links
   const renderer = new marked.Renderer();
   
-  // Handle links
+  // Handle links to ensure they work properly in Word
   // @ts-ignore
-  renderer.link = function(href, title, text) {
+  renderer.link = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
+    let href = '';
+    let title = '';
+    let text = '';
+
+    if (typeof entry === 'object' && entry !== null && 'href' in entry) {
+      // Marked v12+ signature: { href, title, text, ... }
+      href = entry.href || '';
+      title = entry.title || '';
+      text = entry.text || '';
+    } else {
+      // Older Marked signature: (href, title, text)
+      href = String(entry);
+      title = titleIfOld || '';
+      text = textIfOld || '';
+    }
+
     const titleAttr = title ? ` title="${title}"` : '';
     return `<a href="${href}"${titleAttr} style="color: #0563C1; text-decoration: underline;">${text}</a>`;
   };
 
   // Handle images (like badges)
   // @ts-ignore
-  renderer.image = function(href, title, text) {
+  renderer.image = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
+    let href = '';
+    let title = '';
+    let text = '';
+
+    if (typeof entry === 'object' && entry !== null && 'href' in entry) {
+      href = entry.href || '';
+      title = entry.title || '';
+      text = entry.text || '';
+    } else {
+      href = String(entry);
+      title = titleIfOld || '';
+      text = textIfOld || '';
+    }
+
     const titleAttr = title ? ` title="${title}"` : '';
     const altAttr = text ? ` alt="${text}"` : '';
     return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
@@ -21,13 +51,27 @@ export const exportToWord = (markdown: string, fileName: string) => {
   
   // Handle paragraphs to preserve spacing
   // @ts-ignore
-  renderer.paragraph = function(text) {
+  renderer.paragraph = (entry: any) => {
+    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
     return `<p style="margin-top: 0; margin-bottom: 10pt; color: #000000;">${text}</p>`;
   };
   
-  // Handle code blocks
+  // Handle both old (string args) and new (object arg) Marked signatures
   // @ts-ignore
-  renderer.code = function(code, language) {
+  renderer.code = (entry: any, langIfOld?: string) => {
+    let code = '';
+    let language = '';
+
+    if (typeof entry === 'object' && entry !== null && 'text' in entry) {
+      // Marked v12+ signature: { text, lang, ... }
+      code = entry.text || '';
+      language = entry.lang || '';
+    } else {
+      // Older Marked signature: (code, lang)
+      code = String(entry);
+      language = langIfOld || '';
+    }
+
     const langLabel = language ? language.toUpperCase() : '';
     const labelHtml = langLabel 
       ? `<div style="font-family: 'Calibri', sans-serif; font-size: 8pt; color: #555; font-weight: bold; text-transform: uppercase; background: #e0e0e0; padding: 2pt 6pt; border: 1px solid #a6a6a6; border-bottom: none; display: inline-block; border-radius: 4px 4px 0 0;">${langLabel}</div>` 
@@ -53,8 +97,8 @@ export const exportToWord = (markdown: string, fileName: string) => {
   // Apply custom renderer temporarily
   marked.use({ renderer });
 
-  // Convert Markdown to HTML (synchronous in marked v14)
-  const htmlContent = marked.parse(markdown) as string;
+  // Convert Markdown to HTML
+  const htmlContent = marked.parse(markdown);
 
   // Create a complete HTML document with Office namespace
   const docContent = `

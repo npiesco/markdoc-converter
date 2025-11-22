@@ -31,8 +31,8 @@ const App: React.FC = () => {
     }
   }, [isDarkMode]);
 
-  const handleExport = async () => {
-    await exportToWord(content, "Document");
+  const handleExport = () => {
+    exportToWord(content, "Document");
   };
 
   return (
