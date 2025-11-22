@@ -53,7 +53,7 @@ export const exportToWord = (markdown: string, fileName: string) => {
   // @ts-ignore
   renderer.paragraph = (entry: any) => {
     const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    return `<p style="margin-top: 0pt; margin-bottom: 10pt; color: #000000;">${text}</p>`;
+    return `<p style="margin-top: 0pt; margin-bottom: 10pt; color: #000000; white-space: pre-wrap;">${text}</p>`;
   };
   
   // Handle both old (string args) and new (object arg) Marked signatures
