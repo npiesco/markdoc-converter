@@ -1,13 +1,12 @@
-<div align="center">
-  <h1>Mark My Words Down</h1>
-  <p><strong>A beautiful Markdown to Word converter with real-time preview</strong></p>
-  
-  <p><em>Convert Markdown to Microsoft Word entirely in your browser. Zero server communication. Your documents never leave your computer.</em></p>
+# Mark My Words Down
+
+**A beautiful Markdown to Word converter with real-time preview**
+
+*Convert Markdown to Microsoft Word entirely in your browser. Zero server communication. Your documents never leave your computer.*
 
 ![Privacy](https://img.shields.io/badge/privacy-100%25%20Client%20Side-brightgreen)
 ![Tech Stack](https://img.shields.io/badge/stack-React%20|%20TypeScript%20|%20Vite%20|%20Tailwind-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
-</div>
 
 ---
 
