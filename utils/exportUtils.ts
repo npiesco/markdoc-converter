@@ -113,8 +113,17 @@ export const exportToWord = async (markdown: string, fileName: string) => {
   // Apply custom renderer temporarily
   marked.use({ renderer });
 
-  // Convert Markdown to HTML
-  const htmlContent = await marked.parse(markdown);
+  // Convert Markdown to HTML - force sync parse
+  let htmlContent: string;
+  const parseResult = marked.parse(markdown);
+  if (parseResult instanceof Promise) {
+    htmlContent = await parseResult;
+  } else {
+    htmlContent = parseResult;
+  }
+  
+  console.log('Markdown input:', markdown.substring(0, 200));
+  console.log('HTML output:', htmlContent.substring(0, 200));
 
   // Create a complete HTML document with Office namespace
   const docContent = `
