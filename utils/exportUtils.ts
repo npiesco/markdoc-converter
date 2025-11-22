@@ -91,7 +91,8 @@ export const exportToWord = (markdown: string, fileName: string) => {
   // Configure marked
   marked.setOptions({
     gfm: true,
-    breaks: true
+    breaks: true,
+    smartypants: false // Prevent (c) -> © conversion
   });
   
   // Apply custom renderer temporarily

@@ -57,6 +57,13 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
         const altAttr = text ? ` alt="${text}"` : '';
         return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4px;" />`;
       };
+
+      // Handle paragraphs to preserve spacing
+      // @ts-ignore
+      renderer.paragraph = (entry: any) => {
+        const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
+        return `<p style="margin-top: 0; margin-bottom: 10pt; color: #000000;">${text}</p>`;
+      };
       
       // @ts-ignore
       renderer.code = (entry: any, langIfOld?: string) => {
@@ -123,6 +130,9 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
               line-height: 1.15;
               color: #000000;
             }
+            /* Paragraphs */
+            .word-preview p { margin-top: 0; margin-bottom: 10pt; color: #000000; }
+            
             /* Headings */
             .word-preview h1 { font-family: 'Calibri Light', sans-serif; font-size: 16pt; color: #2F5496; font-weight: normal; margin-top: 24pt; margin-bottom: 6pt; }
             .word-preview h2 { font-family: 'Calibri Light', sans-serif; font-size: 13pt; color: #2F5496; font-weight: normal; margin-top: 18pt; margin-bottom: 4pt; }
