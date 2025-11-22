@@ -13,46 +13,16 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
       // Create a custom renderer to MATCH the Export logic
       const renderer = new marked.Renderer();
       
-      // Handle links to ensure they work properly in preview
+      // Handle links
       // @ts-ignore
-      renderer.link = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
-        let href = '';
-        let title = '';
-        let text = '';
-
-        if (typeof entry === 'object' && entry !== null && 'href' in entry) {
-          // Marked v12+ signature: { href, title, text, ... }
-          href = entry.href || '';
-          title = entry.title || '';
-          text = entry.text || '';
-        } else {
-          // Older Marked signature: (href, title, text)
-          href = String(entry);
-          title = titleIfOld || '';
-          text = textIfOld || '';
-        }
-
+      renderer.link = function(href, title, text) {
         const titleAttr = title ? ` title="${title}"` : '';
         return `<a href="${href}"${titleAttr} target="_blank" rel="noopener noreferrer" style="color: #0563C1; text-decoration: underline;">${text}</a>`;
       };
 
       // Handle images (like badges)
       // @ts-ignore
-      renderer.image = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
-        let href = '';
-        let title = '';
-        let text = '';
-
-        if (typeof entry === 'object' && entry !== null && 'href' in entry) {
-          href = entry.href || '';
-          title = entry.title || '';
-          text = entry.text || '';
-        } else {
-          href = String(entry);
-          title = titleIfOld || '';
-          text = textIfOld || '';
-        }
-
+      renderer.image = function(href, title, text) {
         const titleAttr = title ? ` title="${title}"` : '';
         const altAttr = text ? ` alt="${text}"` : '';
         return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4px;" />`;
@@ -60,26 +30,13 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
 
       // Handle paragraphs to preserve spacing
       // @ts-ignore
-      renderer.paragraph = (entry: any) => {
-        const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
+      renderer.paragraph = function(text) {
         return `<p style="margin-top: 0; margin-bottom: 10pt; color: #000000;">${text}</p>`;
       };
       
+      // Handle code blocks
       // @ts-ignore
-      renderer.code = (entry: any, langIfOld?: string) => {
-        let code = '';
-        let language = '';
-
-        if (typeof entry === 'object' && entry !== null && 'text' in entry) {
-          // Marked v12+ signature: { text, lang, ... }
-          code = entry.text || '';
-          language = entry.lang || '';
-        } else {
-          // Older Marked signature: (code, lang)
-          code = String(entry);
-          language = langIfOld || '';
-        }
-
+      renderer.code = function(code, language) {
         const langLabel = language ? language.toUpperCase() : '';
         const labelHtml = langLabel 
           ? `<div class="code-label">${langLabel}</div>` 
@@ -102,15 +59,8 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
       
       marked.use({ renderer });
       
-      // Handle async parse
-      const parseContent = async () => {
-        const html = await marked.parse(content);
-        if (contentRef.current) {
-          contentRef.current.innerHTML = html;
-        }
-      };
-      
-      parseContent();
+      // Parse markdown (synchronous in marked v14)
+      contentRef.current.innerHTML = marked.parse(content) as string;
     }
   }, [content]);
 
