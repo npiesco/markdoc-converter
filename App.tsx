@@ -1,45 +1,24 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Toolbar } from './components/Toolbar';
 import { Editor } from './components/Editor';
 import { Preview } from './components/Preview';
 import { exportToWord } from './utils/exportUtils';
 import { ViewMode } from './types';
 
-const DEFAULT_CONTENT = `# Project Proposal
-
-## Executive Summary
-This document outlines the strategy for the upcoming **Q4 Launch**. We aim to leverage *innovative technologies* to streamline our workflow.
-
-For more information, check out the [GitHub repository](https://github.com/npiesco/markdoc-converter) or view the [README documentation](https://github.com/npiesco/markdoc-converter#readme).
-
-### Key Objectives
-1. Increase efficiency by 25%
-2. Reduce deployment time
-3. Improve documentation standards
-
-## Technical Requirements
-The system needs to handle:
-- High concurrency
-- Real-time data processing
-
-> "Innovation distinguishes between a leader and a follower."
-
-| Component | Status | Priority |
-|-----------|--------|----------|
-| Frontend  | Done   | High     |
-| Backend   | WIP    | High     |
-| Database  | Pending| Medium   |
-
-\`\`\`javascript
-function init() {
-  console.log("System ready");
-}
-\`\`\`
-`;
-
 const App: React.FC = () => {
-  const [content, setContent] = useState<string>(DEFAULT_CONTENT);
+  const [content, setContent] = useState<string>('# Loading...');
+  
+  // Load README.md on component mount
+  useEffect(() => {
+    fetch('/README.md')
+      .then(response => response.text())
+      .then(text => setContent(text))
+      .catch(error => {
+        console.error('Failed to load README:', error);
+        setContent('# Mark My Words Down\n\nWelcome! Start typing your Markdown here...');
+      });
+  }, []);
   const [viewMode, setViewMode] = useState<ViewMode>(ViewMode.SPLIT);
   const [isDarkMode, setIsDarkMode] = useState<boolean>(false);
 

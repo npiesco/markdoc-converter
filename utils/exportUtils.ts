@@ -26,6 +26,35 @@ export const exportToWord = (markdown: string, fileName: string) => {
     const titleAttr = title ? ` title="${title}"` : '';
     return `<a href="${href}"${titleAttr} style="color: #0563C1; text-decoration: underline;">${text}</a>`;
   };
+
+  // Handle images (like badges)
+  // @ts-ignore
+  renderer.image = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
+    let href = '';
+    let title = '';
+    let text = '';
+
+    if (typeof entry === 'object' && entry !== null && 'href' in entry) {
+      href = entry.href || '';
+      title = entry.title || '';
+      text = entry.text || '';
+    } else {
+      href = String(entry);
+      title = titleIfOld || '';
+      text = textIfOld || '';
+    }
+
+    const titleAttr = title ? ` title="${title}"` : '';
+    const altAttr = text ? ` alt="${text}"` : '';
+    return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
+  };
+  
+  // Handle paragraphs to preserve spacing
+  // @ts-ignore
+  renderer.paragraph = (entry: any) => {
+    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
+    return `<p style="margin-top: 0; margin-bottom: 10pt; color: #000000;">${text}</p>`;
+  };
   
   // Handle both old (string args) and new (object arg) Marked signatures
   // @ts-ignore
