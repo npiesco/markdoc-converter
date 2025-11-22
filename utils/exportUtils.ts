@@ -49,13 +49,6 @@ export const exportToWord = (markdown: string, fileName: string) => {
     return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
   };
   
-  // Handle paragraphs to preserve spacing
-  // @ts-ignore
-  renderer.paragraph = (entry: any) => {
-    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    return `<p style="margin-top: 0; margin-bottom: 10pt; color: #000000;">${text}</p>`;
-  };
-  
   // Handle both old (string args) and new (object arg) Marked signatures
   // @ts-ignore
   renderer.code = (entry: any, langIfOld?: string) => {
