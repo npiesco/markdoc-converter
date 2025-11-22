@@ -4,9 +4,9 @@
   
   <p><em>Convert Markdown to Microsoft Word entirely in your browser. Zero server communication. Your documents never leave your computer.</em></p>
 
-[![Privacy](https://img.shields.io/badge/privacy-100%25%20Client%20Side-brightgreen)](.)
-[![Tech Stack](https://img.shields.io/badge/stack-React%20|%20TypeScript%20|%20Vite%20|%20Tailwind-blue)](.)
-[![License](https://img.shields.io/badge/license-MIT-green)](LICENSE)
+![Privacy](https://img.shields.io/badge/privacy-100%25%20Client%20Side-brightgreen)
+![Tech Stack](https://img.shields.io/badge/stack-React%20|%20TypeScript%20|%20Vite%20|%20Tailwind-blue)
+![License](https://img.shields.io/badge/license-MIT-green)
 </div>
 
 ---
@@ -144,11 +144,9 @@ The exported Word document will show language labels above each code block.
 
 Links are automatically converted to clickable hyperlinks in Word:
 
-```markdown
 Visit the [documentation](https://github.com/npiesco/markdoc-converter#readme) for more information.
 
 Check out our [GitHub repository](https://github.com/npiesco/markdoc-converter).
-```
 
 ### Exporting to Word
 
