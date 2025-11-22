@@ -91,7 +91,7 @@ export const exportToWord = (markdown: string, fileName: string) => {
   // Configure marked
   marked.setOptions({
     gfm: true,
-    breaks: true
+    breaks: false // Keep paragraph breaks as separate <p> tags for proper spacing
   });
   
   // Apply custom renderer temporarily

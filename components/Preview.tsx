@@ -90,7 +90,7 @@ export const Preview: React.FC<PreviewProps> = ({ content }) => {
 
       marked.setOptions({
         gfm: true,
-        breaks: true
+        breaks: false // Keep paragraph breaks as separate <p> tags for proper spacing
       });
       
       marked.use({ renderer });
