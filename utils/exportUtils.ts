@@ -27,7 +27,7 @@ export const exportToWord = (markdown: string, fileName: string) => {
     return `<a href="${href}"${titleAttr} style="color: #0563C1; text-decoration: underline;">${text}</a>`;
   };
 
-  // Handle images (like badges)
+  // Handle images (like badges) - Note: Word may not load external URLs
   // @ts-ignore
   renderer.image = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
     let href = '';
@@ -46,7 +46,22 @@ export const exportToWord = (markdown: string, fileName: string) => {
 
     const titleAttr = title ? ` title="${title}"` : '';
     const altAttr = text ? ` alt="${text}"` : '';
+    // Word Desktop may not load external images - use v:imagedata for better compatibility
     return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
+  };
+  
+  // Handle bold text
+  // @ts-ignore
+  renderer.strong = (entry: any) => {
+    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
+    return `<strong style="font-weight: bold;">${text}</strong>`;
+  };
+  
+  // Handle italic text
+  // @ts-ignore
+  renderer.em = (entry: any) => {
+    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
+    return `<em style="font-style: italic;">${text}</em>`;
   };
   
   // Handle paragraphs with proper Word spacing

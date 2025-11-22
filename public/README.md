@@ -99,7 +99,6 @@ npm run preview
 
 The editor supports all standard Markdown syntax:
 
-```markdown
 # Heading 1
 ## Heading 2
 ### Heading 3
@@ -119,7 +118,6 @@ The editor supports all standard Markdown syntax:
 | Column 1 | Column 2 |
 |----------|----------|
 | Data     | More data|
-```
 
 ### Code Blocks with Language Labels
 
