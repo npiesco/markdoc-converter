@@ -1,258 +1,279 @@
 import { marked } from 'marked';
+import {
+  Document,
+  Packer,
+  Paragraph,
+  TextRun,
+  HeadingLevel,
+  AlignmentType,
+  Table,
+  TableRow,
+  TableCell,
+  WidthType,
+  ExternalHyperlink,
+  ImageRun,
+} from 'docx';
 
+/**
+ * Parse markdown and convert to DOCX paragraphs
+ */
+const markdownToDocx = async (markdown: string): Promise<Paragraph[]> => {
+  const paragraphs: Paragraph[] = [];
+  
+  // Parse markdown tokens
+  const tokens = marked.lexer(markdown);
+  
+  for (const token of tokens) {
+    switch (token.type) {
+      case 'heading':
+        const headingLevels: { [key: number]: HeadingLevel } = {
+          1: HeadingLevel.HEADING_1,
+          2: HeadingLevel.HEADING_2,
+          3: HeadingLevel.HEADING_3,
+          4: HeadingLevel.HEADING_4,
+          5: HeadingLevel.HEADING_5,
+          6: HeadingLevel.HEADING_6,
+        };
+        paragraphs.push(
+          new Paragraph({
+            text: token.text,
+            heading: headingLevels[token.depth] || HeadingLevel.HEADING_1,
+          })
+        );
+        break;
+
+      case 'paragraph':
+        const runs = parseInlineTokens(token.tokens || []);
+        if (runs.length > 0) {
+          paragraphs.push(new Paragraph({ children: runs }));
+        }
+        break;
+
+      case 'code':
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: token.text,
+                font: 'Consolas',
+                size: 20,
+              }),
+            ],
+            style: 'Code',
+          })
+        );
+        break;
+
+      case 'blockquote':
+        const quoteText = typeof token.text === 'string' ? token.text : '';
+        paragraphs.push(
+          new Paragraph({
+            children: [
+              new TextRun({
+                text: quoteText,
+                italics: true,
+              }),
+            ],
+            style: 'Quote',
+          })
+        );
+        break;
+
+      case 'list':
+        if (token.items) {
+          for (const item of token.items) {
+            const itemRuns = parseInlineTokens(item.tokens || []);
+            paragraphs.push(
+              new Paragraph({
+                children: itemRuns,
+                bullet: token.ordered ? undefined : { level: 0 },
+                numbering: token.ordered ? { reference: 'default', level: 0 } : undefined,
+              })
+            );
+          }
+        }
+        break;
+
+      case 'table':
+        // Create table
+        if (token.header && token.rows) {
+          const headerCells = token.header.map(
+            (cell: any) =>
+              new TableCell({
+                children: [new Paragraph({ children: parseInlineTokens(cell.tokens || []) })],
+              })
+          );
+
+          const headerRow = new TableRow({ children: headerCells });
+
+          const bodyRows = token.rows.map(
+            (row: any) =>
+              new TableRow({
+                children: row.map(
+                  (cell: any) =>
+                    new TableCell({
+                      children: [new Paragraph({ children: parseInlineTokens(cell.tokens || []) })],
+                    })
+                ),
+              })
+          );
+
+          paragraphs.push(
+            new Paragraph({
+              children: [
+                // @ts-ignore - Table is valid child
+                new Table({
+                  rows: [headerRow, ...bodyRows],
+                  width: { size: 100, type: WidthType.PERCENTAGE },
+                }),
+              ],
+            })
+          );
+        }
+        break;
+
+      case 'space':
+        // Add blank line
+        paragraphs.push(new Paragraph({ text: '' }));
+        break;
+
+      case 'hr':
+        paragraphs.push(
+          new Paragraph({
+            text: '_______________________________________________',
+            alignment: AlignmentType.CENTER,
+          })
+        );
+        break;
+
+      default:
+        // Handle any unrecognized token types as plain text
+        if ('text' in token) {
+          paragraphs.push(new Paragraph({ text: String(token.text) }));
+        }
+        break;
+    }
+  }
+
+  return paragraphs;
+};
+
+/**
+ * Parse inline markdown tokens (bold, italic, links, etc.)
+ */
+const parseInlineTokens = (tokens: any[]): (TextRun | ExternalHyperlink)[] => {
+  const runs: (TextRun | ExternalHyperlink)[] = [];
+
+  for (const token of tokens) {
+    switch (token.type) {
+      case 'text':
+        runs.push(
+          new TextRun({
+            text: token.text,
+          })
+        );
+        break;
+
+      case 'strong':
+        runs.push(
+          new TextRun({
+            text: token.text,
+            bold: true,
+          })
+        );
+        break;
+
+      case 'em':
+        runs.push(
+          new TextRun({
+            text: token.text,
+            italics: true,
+          })
+        );
+        break;
+
+      case 'codespan':
+        runs.push(
+          new TextRun({
+            text: token.text,
+            font: 'Consolas',
+          })
+        );
+        break;
+
+      case 'link':
+        runs.push(
+          new ExternalHyperlink({
+            children: [
+              new TextRun({
+                text: token.text,
+                style: 'Hyperlink',
+                color: '0563C1',
+                underline: {},
+              }),
+            ],
+            link: token.href,
+          })
+        );
+        break;
+
+      case 'image':
+        // Note: Images from URLs won't work in Word without downloading them
+        // For now, we'll just show the alt text
+        runs.push(
+          new TextRun({
+            text: `[Image: ${token.text || token.href}]`,
+            italics: true,
+            color: '666666',
+          })
+        );
+        break;
+
+      case 'br':
+        runs.push(new TextRun({ text: '', break: 1 }));
+        break;
+
+      default:
+        if ('text' in token) {
+          runs.push(new TextRun({ text: String(token.text) }));
+        }
+        break;
+    }
+  }
+
+  return runs;
+};
+
+/**
+ * Export markdown content to a Word document
+ */
 export const exportToWord = async (markdown: string, fileName: string) => {
-  // Create a custom renderer to handle Code Blocks with Language Labels and Links
-  const renderer = new marked.Renderer();
-  
-  // Handle links to ensure they work properly in Word
-  // @ts-ignore
-  renderer.link = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
-    let href = '';
-    let title = '';
-    let text = '';
+  try {
+    // Convert markdown to DOCX paragraphs
+    const paragraphs = await markdownToDocx(markdown);
 
-    if (typeof entry === 'object' && entry !== null && 'href' in entry) {
-      // Marked v12+ signature: { href, title, text, ... }
-      href = entry.href || '';
-      title = entry.title || '';
-      text = entry.text || '';
-    } else {
-      // Older Marked signature: (href, title, text)
-      href = String(entry);
-      title = titleIfOld || '';
-      text = textIfOld || '';
-    }
+    // Create document
+    const doc = new Document({
+      sections: [
+        {
+          properties: {},
+          children: paragraphs,
+        },
+      ],
+    });
 
-    const titleAttr = title ? ` title="${title}"` : '';
-    return `<a href="${href}"${titleAttr} style="color: #0563C1; text-decoration: underline;">${text}</a>`;
-  };
-
-  // Handle images (like badges) - Note: Word may not load external URLs
-  // @ts-ignore
-  renderer.image = (entry: any, titleIfOld?: string | null, textIfOld?: string) => {
-    let href = '';
-    let title = '';
-    let text = '';
-
-    if (typeof entry === 'object' && entry !== null && 'href' in entry) {
-      href = entry.href || '';
-      title = entry.title || '';
-      text = entry.text || '';
-    } else {
-      href = String(entry);
-      title = titleIfOld || '';
-      text = textIfOld || '';
-    }
-
-    const titleAttr = title ? ` title="${title}"` : '';
-    const altAttr = text ? ` alt="${text}"` : '';
-    // Word Desktop may not load external images - use v:imagedata for better compatibility
-    return `<img src="${href}"${altAttr}${titleAttr} style="max-width: 100%; height: auto; vertical-align: middle; margin: 4pt 4pt;" />`;
-  };
-  
-  // Handle bold text
-  // @ts-ignore
-  renderer.strong = (entry: any) => {
-    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    return `<strong style="font-weight: bold;">${text}</strong>`;
-  };
-  
-  // Handle italic text
-  // @ts-ignore
-  renderer.em = (entry: any) => {
-    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    return `<em style="font-style: italic;">${text}</em>`;
-  };
-  
-  // Handle paragraphs with proper Word spacing
-  // @ts-ignore
-  renderer.paragraph = (entry: any) => {
-    const text = typeof entry === 'object' && entry !== null && 'text' in entry ? entry.text : String(entry);
-    // Use mso-specific styles for Word paragraph spacing
-    return `<p style="margin: 0; mso-para-margin-bottom: 1.0em; line-height: 115%;">${text}</p>`;
-  };
-  
-  // Handle both old (string args) and new (object arg) Marked signatures
-  // @ts-ignore
-  renderer.code = (entry: any, langIfOld?: string) => {
-    let code = '';
-    let language = '';
-
-    if (typeof entry === 'object' && entry !== null && 'text' in entry) {
-      // Marked v12+ signature: { text, lang, ... }
-      code = entry.text || '';
-      language = entry.lang || '';
-    } else {
-      // Older Marked signature: (code, lang)
-      code = String(entry);
-      language = langIfOld || '';
-    }
-
-    const langLabel = language ? language.toUpperCase() : '';
-    const labelHtml = langLabel 
-      ? `<div style="font-family: 'Calibri', sans-serif; font-size: 8pt; color: #555; font-weight: bold; text-transform: uppercase; background: #e0e0e0; padding: 2pt 6pt; border: 1px solid #a6a6a6; border-bottom: none; display: inline-block; border-radius: 4px 4px 0 0;">${langLabel}</div>` 
-      : '';
-    
-    const marginTop = langLabel ? '0' : '10pt';
-    const borderRadius = langLabel ? '0 4px 4px 4px' : '4px';
-
-    return `
-      <div style="margin-bottom: 12pt; margin-top: 10pt; page-break-inside: avoid;">
-        ${labelHtml}
-        <pre style="background-color: #f8f8f8; border: 1px solid #a6a6a6; padding: 8pt; margin-top: ${marginTop}; border-radius: ${borderRadius}; font-family: 'Consolas', 'Courier New', monospace; font-size: 10pt; color: #000000; white-space: pre-wrap; word-wrap: break-word;"><code>${code}</code></pre>
-      </div>
-    `;
-  };
-
-  // Configure marked
-  marked.setOptions({
-    gfm: true,
-    breaks: false // Keep paragraph breaks as separate <p> tags for proper spacing
-  });
-  
-  // Apply custom renderer temporarily
-  marked.use({ renderer });
-
-  // Convert Markdown to HTML
-  const htmlContent = await marked.parse(markdown);
-
-  // Create a complete HTML document with Office namespace
-  const docContent = `
-    <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
-    <head>
-      <meta charset="utf-8">
-      <title>${fileName}</title>
-      <!--[if gte mso 9]>
-      <xml>
-        <w:WordDocument>
-          <w:View>Print</w:View>
-          <w:Zoom>100</w:Zoom>
-          <w:DoNotOptimizeForBrowser/>
-        </w:WordDocument>
-      </xml>
-      <![endif]-->
-      <style>
-        /* Default Word 2016+ Normal Style */
-        body {
-          font-family: 'Calibri', sans-serif;
-          font-size: 11pt;
-          line-height: 1.15;
-          color: #000000;
-          mso-line-height-rule: exactly;
-        }
-
-        /* Headings */
-        h1 {
-          font-family: 'Calibri Light', sans-serif;
-          font-size: 16pt;
-          color: #2F5496;
-          margin-top: 24pt;
-          margin-bottom: 6pt;
-          font-weight: normal;
-        }
-
-        h2 {
-          font-family: 'Calibri Light', sans-serif;
-          font-size: 13pt;
-          color: #2F5496;
-          margin-top: 18pt;
-          margin-bottom: 4pt;
-          font-weight: normal;
-        }
-
-        h3 {
-          font-family: 'Calibri Light', sans-serif;
-          font-size: 12pt;
-          color: #1F3763;
-          margin-top: 14pt;
-          margin-bottom: 4pt;
-          font-weight: bold;
-        }
-
-        /* Paragraphs */
-        p {
-          margin-top: 0;
-          margin-bottom: 10pt;
-          color: #000000;
-        }
-
-        /* Lists - Explicitly define margins for Word */
-        ul {
-          margin-top: 0;
-          margin-bottom: 10pt;
-          padding-left: 24pt; /* Indent for bullets */
-          list-style-type: disc;
-        }
-
-        ol {
-          margin-top: 0;
-          margin-bottom: 10pt;
-          padding-left: 24pt; /* Indent for numbers */
-          list-style-type: decimal;
-        }
-
-        li {
-          margin-bottom: 3pt;
-          color: #000000; /* Ensure text is black */
-        }
-
-        /* Links */
-        a {
-          color: #0563C1;
-          text-decoration: underline;
-        }
-
-        /* Blockquotes */
-        blockquote {
-          margin-left: 0;
-          padding-left: 10pt;
-          border-left: 4px solid #5b9bd5;
-          color: #404040;
-          font-style: italic;
-        }
-
-        /* Tables */
-        table {
-          border-collapse: collapse;
-          width: 100%;
-          margin-bottom: 15pt;
-          border: 1px solid #000000;
-        }
-
-        th {
-          border: 1px solid #000000;
-          background-color: #e7e6e6;
-          padding: 6pt;
-          text-align: left;
-          font-weight: bold;
-          color: #000000 !important; /* Force Black */
-        }
-
-        td {
-          border: 1px solid #000000;
-          padding: 6pt;
-          vertical-align: top;
-          color: #000000 !important; /* Force Black */
-        }
-      </style>
-    </head>
-    <body>
-      ${htmlContent}
-    </body>
-    </html>
-  `;
-
-  const blob = new Blob(['\ufeff', docContent], {
-    type: 'application/msword'
-  });
-  
-  const url = URL.createObjectURL(blob);
-  const link = document.createElement('a');
-  link.href = url;
-  link.download = `${fileName}.doc`;
-  document.body.appendChild(link);
-  link.click();
-  
-  document.body.removeChild(link);
-  URL.revokeObjectURL(url);
+    // Generate and download
+    const blob = await Packer.toBlob(doc);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `${fileName}.docx`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    window.URL.revokeObjectURL(url);
+  } catch (error) {
+    console.error('Error exporting to Word:', error);
+    alert('Failed to export document. Please try again.');
+  }
 };
