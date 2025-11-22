@@ -1,6 +1,6 @@
 import { marked } from 'marked';
 
-export const exportToWord = (markdown: string, fileName: string) => {
+export const exportToWord = async (markdown: string, fileName: string) => {
   // Create a custom renderer to handle Code Blocks with Language Labels and Links
   const renderer = new marked.Renderer();
   
@@ -114,7 +114,7 @@ export const exportToWord = (markdown: string, fileName: string) => {
   marked.use({ renderer });
 
   // Convert Markdown to HTML
-  const htmlContent = marked.parse(markdown);
+  const htmlContent = await marked.parse(markdown);
 
   // Create a complete HTML document with Office namespace
   const docContent = `
