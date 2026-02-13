@@ -16,6 +16,13 @@ import * as path from 'node:path';
 // Import the extracted pure tool function
 import { convertMarkdownToWord } from './mcp.js';
 
+/** Narrow a content block to its text value (throws if not a text block). */
+function textOf(block: { type: string; [k: string]: unknown }): string {
+  if (block.type !== 'text' || typeof block.text !== 'string')
+    throw new Error(`Expected text block, got ${block.type}`);
+  return block.text;
+}
+
 describe('Vercel MCP tool: convert_markdown_to_word', () => {
   it('RED: does NOT write to the server filesystem', async () => {
     // Snapshot /tmp before
@@ -46,14 +53,14 @@ describe('Vercel MCP tool: convert_markdown_to_word', () => {
     expect(result.content.length).toBeGreaterThanOrEqual(2);
 
     // Second content block must be the base64 data URI
-    const base64Block = result.content.find((c: any) =>
-      c.text?.startsWith('data:application/msword;base64,'),
+    const base64Block = result.content.find(
+      (c) => c.type === 'text' && c.text?.startsWith('data:application/msword;base64,'),
     );
     expect(base64Block).toBeDefined();
 
     // Decode and verify it starts with UTF-8 BOM + HTML
     const raw = Buffer.from(
-      base64Block!.text.replace('data:application/msword;base64,', ''),
+      textOf(base64Block!).replace('data:application/msword;base64,', ''),
       'base64',
     ).toString('utf-8');
     expect(raw).toContain('\ufeff');
@@ -67,7 +74,7 @@ describe('Vercel MCP tool: convert_markdown_to_word', () => {
       outputDir: 'C:/Users/someone/Desktop',
     });
 
-    const textBlock = result.content[0].text;
+    const textBlock = textOf(result.content[0]);
 
     // Must tell the LLM the target path on the USER's machine
     expect(textBlock).toContain('C:/Users/someone/Desktop');
@@ -81,7 +88,7 @@ describe('Vercel MCP tool: convert_markdown_to_word', () => {
       markdown: '# Default name test',
     });
 
-    const textBlock = result.content[0].text;
+    const textBlock = textOf(result.content[0]);
     expect(textBlock).toContain('document.doc');
   });
 
@@ -90,7 +97,7 @@ describe('Vercel MCP tool: convert_markdown_to_word', () => {
       markdown: '# Default dir test',
     });
 
-    const textBlock = result.content[0].text;
+    const textBlock = textOf(result.content[0]);
     // Should mention saving to the current/working directory
     expect(textBlock).toMatch(/current.*director|working.*director/i);
   });

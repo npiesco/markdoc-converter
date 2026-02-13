@@ -15,6 +15,7 @@
 
 import { z } from 'zod';
 import { createMcpHandler } from 'mcp-handler';
+import type { CallToolResult } from '@modelcontextprotocol/sdk/types.js';
 import { markdownToWordHtml } from '../mcp-server/src/converter.js';
 
 /* ------------------------------------------------------------------ */
@@ -27,15 +28,7 @@ export interface ConvertInput {
   outputDir?: string;
 }
 
-export interface ContentBlock {
-  type: 'text';
-  text: string;
-}
-
-export interface ConvertResult {
-  content: ContentBlock[];
-  isError?: boolean;
-}
+export type ConvertResult = CallToolResult;
 
 export async function convertMarkdownToWord(
   input: ConvertInput,
@@ -103,36 +96,47 @@ export async function convertMarkdownToWord(
 
 const handler = createMcpHandler(
   (server) => {
-    server.tool(
+    server.registerTool(
       'convert_markdown_to_word',
-      'Converts Markdown text into a Microsoft Word (.doc) document. ' +
-        'Supports GitHub Flavored Markdown: headings, bold/italic, code blocks ' +
-        'with language labels, tables, links, images, blockquotes, and lists. ' +
-        'Output uses Word 2016+ default formatting (Calibri, proper heading ' +
-        'colors, black table borders). Returns base64-encoded .doc content — ' +
-        'you MUST save the decoded bytes to the user\'s local filesystem at ' +
-        'the path indicated in the response. Use forward slashes for ' +
-        'cross-platform paths (e.g. "C:/Users/me/Documents").',
       {
-        markdown: z
-          .string()
-          .describe('The Markdown content to convert to a Word document'),
-        filename: z
-          .string()
-          .optional()
-          .describe(
-            'Output filename without extension. Defaults to "document".',
-          ),
-        outputDir: z
-          .string()
-          .optional()
-          .describe(
-            'Directory path on the USER\'S machine where the .doc file ' +
-            'should be saved. This is a hint for the LLM — the server does ' +
-            'NOT write to disk. Works on Windows, macOS, and Linux — use ' +
-            'forward slashes for cross-platform compatibility. When omitted, ' +
-            'the LLM should save to the user\'s current working directory.',
-          ),
+        description:
+          'Converts Markdown text into a Microsoft Word (.doc) document. ' +
+          'Supports GitHub Flavored Markdown: headings, bold/italic, code blocks ' +
+          'with language labels, tables, links, images, blockquotes, and lists. ' +
+          'Output uses Word 2016+ default formatting (Calibri, proper heading ' +
+          'colors, black table borders).\n\n' +
+          'HOW IT WORKS:\n' +
+          '1. The server converts Markdown → Word HTML and returns TWO text blocks.\n' +
+          '2. Block 1: Instructions with the target file path on the USER\'s machine.\n' +
+          '3. Block 2: The full .doc content as a base64 data URI ' +
+          '(data:application/msword;base64,…).\n' +
+          '4. You MUST decode the base64 and write the bytes to the path from Block 1 ' +
+          'on the user\'s LOCAL filesystem. The server does NOT write any files.\n\n' +
+          'Use forward slashes for cross-platform paths ' +
+          '(e.g. "C:/Users/me/Documents").',
+        inputSchema: {
+          markdown: z
+            .string()
+            .describe('The Markdown content to convert to a Word document'),
+          filename: z
+            .string()
+            .optional()
+            .describe(
+              'Output filename without extension. Defaults to "document".',
+            ),
+          outputDir: z
+            .string()
+            .optional()
+            .describe(
+              'Directory path on the USER\'S local machine where the .doc file ' +
+              'should be saved (e.g. "C:/Users/me/Documents" or ' +
+              '"/home/me/Documents"). This is a path hint returned in the ' +
+              'response for you (the LLM) to use when writing the file — the ' +
+              'server itself does NOT touch the filesystem. Use forward slashes ' +
+              'for cross-platform compatibility. When omitted, the response ' +
+              'instructs you to save to the user\'s current working directory.',
+            ),
+        },
       },
       async ({ markdown, filename, outputDir }) => {
         return convertMarkdownToWord({

@@ -25,13 +25,26 @@ It exposes a single tool, `convert_markdown_to_word`, that converts Markdown int
 |-------------|--------|----------|-------------|
 | `markdown`  | string | yes      | Markdown content to convert |
 | `filename`  | string | no       | Output file name without extension (default: `document`) |
-| `outputDir` | string | no       | Output directory (default: OS temp directory) |
-
-**Returns:**
-- Saved `.doc` file path
-- Base64-encoded document payload
+| `outputDir` | string | no       | Output directory (default: current working directory) |
 
 **Supports:** GitHub Flavored Markdown (headings, emphasis, lists, tables, links, images, blockquotes, fenced code blocks with language labels).
+
+#### Local server (stdio)
+
+The file is written to `outputDir` on your machine and the tool returns both the saved file path and the base64-encoded content.
+
+#### Remote server (Vercel)
+
+The remote endpoint **does NOT write files**. It returns:
+
+| Block | Content |
+|-------|---------|
+| 1     | Instructions with the target path on the **user's** machine |
+| 2     | Full `.doc` as a `data:application/msword;base64,…` data URI |
+
+The LLM client (Copilot, Claude, Cursor, etc.) is responsible for decoding the base64 and writing the `.doc` file to the user's local filesystem at the path indicated in Block 1.
+
+> **`outputDir` on the remote server** is a path hint for the LLM — it is *not* used server-side. If omitted, the LLM is instructed to save to the user's current working directory.
 
 ## Quick Start
 
@@ -144,8 +157,14 @@ Connect from any MCP client (Cursor, VS Code, Claude Desktop):
 }
 ```
 
-The remote server exposes the same `convert_markdown_to_word` tool but returns
-the Word document purely as a base64 data URI (no filesystem writes in serverless).
+The remote server exposes the same `convert_markdown_to_word` tool but **never
+writes files to disk**. Instead it returns:
+
+1. **Block 1** — Save instructions with the target path on the user's machine.
+2. **Block 2** — The `.doc` content as a `data:application/msword;base64,…` URI.
+
+The LLM client decodes the base64 and writes the file to the user's local
+filesystem. See the [Tool](#tool) section above for the full flow.
 
 The Vercel API route lives at `api/mcp.ts` in the repository root and uses the
 [`mcp-handler`](https://www.npmjs.com/package/mcp-handler) package from the
