@@ -110,7 +110,7 @@ server.registerTool(
           {
             type: 'text' as const,
             text: [
-              `✅ Word document saved successfully.`,
+              `Word document saved successfully.`,
               ``,
               `**File:** ${outPath}`,
               `**Size:** ${(stats.size / 1024).toFixed(1)} KB`,
@@ -131,7 +131,7 @@ server.registerTool(
         content: [
           {
             type: 'text' as const,
-            text: `❌ Failed to convert Markdown to Word: ${message}`,
+            text: `Failed to convert Markdown to Word: ${message}`,
           },
         ],
         isError: true,
