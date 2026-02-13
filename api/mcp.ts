@@ -5,32 +5,114 @@
  * transport so that any MCP-compatible client (Cursor, Claude Desktop,
  * VS Code Copilot Chat, etc.) can reach it at:
  *
- *   https://<your-vercel-app>.vercel.app/api/mcp
+ *   https://markdoc-converter.vercel.app/api/mcp
  *
- * The tool always persists the .doc file to disk (defaults to /tmp in
- * serverless) and returns the file path + base64-encoded content.
+ * The tool does NOT write to the server filesystem (it's ephemeral and
+ * useless to the user). Instead it returns base64-encoded .doc content and
+ * instructs the LLM to save the file on the user's local machine at the
+ * path described by outputDir + filename.
  */
 
 import { z } from 'zod';
 import { createMcpHandler } from 'mcp-handler';
 import { markdownToWordHtml } from '../mcp-server/src/converter.js';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+
+/* ------------------------------------------------------------------ */
+/*  Pure conversion function — no filesystem side-effects              */
+/* ------------------------------------------------------------------ */
+
+export interface ConvertInput {
+  markdown: string;
+  filename?: string;
+  outputDir?: string;
+}
+
+export interface ContentBlock {
+  type: 'text';
+  text: string;
+}
+
+export interface ConvertResult {
+  content: ContentBlock[];
+  isError?: boolean;
+}
+
+export async function convertMarkdownToWord(
+  input: ConvertInput,
+): Promise<ConvertResult> {
+  try {
+    const docTitle = input.filename ?? 'document';
+    const targetDir = input.outputDir;
+
+    // Generate the Office-compatible HTML document
+    const html = markdownToWordHtml(input.markdown, docTitle);
+
+    // Prepend UTF-8 BOM for Word compatibility
+    const bom = '\ufeff';
+    const content = bom + html;
+
+    const base64 = Buffer.from(content, 'utf-8').toString('base64');
+    const sizeKB = (Buffer.byteLength(content, 'utf-8') / 1024).toFixed(1);
+
+    // Build the target path hint for the LLM
+    const targetFile = `${docTitle}.doc`;
+    const savePath = targetDir ? `${targetDir}/${targetFile}` : targetFile;
+    const dirHint = targetDir
+      ? `\`${targetDir}\``
+      : 'the current working directory';
+
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: [
+            `Word document generated successfully (${sizeKB} KB).`,
+            '',
+            `**Please save this file to the user's machine.**`,
+            `**Target path:** \`${savePath}\``,
+            `**Directory:** ${dirHint}`,
+            '',
+            `Write the base64-decoded content below to \`${savePath}\` on ` +
+              `the user's local filesystem. If the directory does not exist, ` +
+              `create it first.`,
+          ].join('\n'),
+        },
+        {
+          type: 'text' as const,
+          text: `data:application/msword;base64,${base64}`,
+        },
+      ],
+    };
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : String(err);
+    return {
+      content: [
+        {
+          type: 'text' as const,
+          text: `Failed to convert Markdown to Word: ${message}`,
+        },
+      ],
+      isError: true,
+    };
+  }
+}
+
+/* ------------------------------------------------------------------ */
+/*  MCP handler wiring                                                 */
+/* ------------------------------------------------------------------ */
 
 const handler = createMcpHandler(
   (server) => {
     server.tool(
       'convert_markdown_to_word',
-      'Converts Markdown text into a Microsoft Word (.doc) document and ' +
-        'saves it to disk. Supports GitHub Flavored Markdown: headings, ' +
-        'bold/italic, code blocks with language labels, tables, links, images, ' +
-        'blockquotes, and lists. Output uses Word 2016+ default formatting ' +
-        '(Calibri, proper heading colors, black table borders). ' +
-        'The file is ALWAYS written to disk at the path specified by outputDir ' +
-        '(defaults to /tmp in serverless environments). Use forward slashes for ' +
-        'cross-platform paths (e.g. "C:/Users/me/Documents" or ' +
-        '"/home/me/Documents"). Returns the saved file path and the document ' +
-        'encoded as base64.',
+      'Converts Markdown text into a Microsoft Word (.doc) document. ' +
+        'Supports GitHub Flavored Markdown: headings, bold/italic, code blocks ' +
+        'with language labels, tables, links, images, blockquotes, and lists. ' +
+        'Output uses Word 2016+ default formatting (Calibri, proper heading ' +
+        'colors, black table borders). Returns base64-encoded .doc content — ' +
+        'you MUST save the decoded bytes to the user\'s local filesystem at ' +
+        'the path indicated in the response. Use forward slashes for ' +
+        'cross-platform paths (e.g. "C:/Users/me/Documents").',
       {
         markdown: z
           .string()
@@ -45,67 +127,19 @@ const handler = createMcpHandler(
           .string()
           .optional()
           .describe(
-            'Absolute or relative directory path to save the .doc file. ' +
-            'Works on Windows, macOS, and Linux — use forward slashes for ' +
-            'cross-platform compatibility. Defaults to /tmp in serverless ' +
-            'or the current working directory in local environments.',
+            'Directory path on the USER\'S machine where the .doc file ' +
+            'should be saved. This is a hint for the LLM — the server does ' +
+            'NOT write to disk. Works on Windows, macOS, and Linux — use ' +
+            'forward slashes for cross-platform compatibility. When omitted, ' +
+            'the LLM should save to the user\'s current working directory.',
           ),
       },
       async ({ markdown, filename, outputDir }) => {
-        try {
-          const docTitle = (filename as string | undefined) ?? 'document';
-          const dir = path.resolve((outputDir as string | undefined) ?? '/tmp');
-
-          // Ensure output directory exists
-          fs.mkdirSync(dir, { recursive: true });
-
-          const outPath = path.resolve(path.join(dir, `${docTitle}.doc`));
-
-          // Generate the Office-compatible HTML document
-          const html = markdownToWordHtml(markdown, docTitle);
-
-          // Prepend UTF-8 BOM for Word compatibility
-          const bom = '\ufeff';
-          const content = bom + html;
-
-          // Always persist to disk
-          fs.writeFileSync(outPath, content, 'utf-8');
-
-          const stats = fs.statSync(outPath);
-          const base64 = fs.readFileSync(outPath).toString('base64');
-
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: [
-                  'Word document saved successfully.',
-                  '',
-                  `**File:** ${outPath}`,
-                  `**Size:** ${(stats.size / 1024).toFixed(1)} KB`,
-                  '',
-                  'Open the .doc file in Microsoft Word, LibreOffice, or Google Docs.',
-                  'The base64-encoded document is also attached below for programmatic use.',
-                ].join('\n'),
-              },
-              {
-                type: 'text' as const,
-                text: `data:application/msword;base64,${base64}`,
-              },
-            ],
-          };
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : String(err);
-          return {
-            content: [
-              {
-                type: 'text' as const,
-                text: `Failed to convert Markdown to Word: ${message}`,
-              },
-            ],
-            isError: true,
-          };
-        }
+        return convertMarkdownToWord({
+          markdown: markdown as string,
+          filename: filename as string | undefined,
+          outputDir: outputDir as string | undefined,
+        });
       },
     );
   },
