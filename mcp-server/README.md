@@ -45,6 +45,12 @@ It exposes a single tool, `convert_markdown_to_word`, that converts Markdown int
 
 The MCP SDK v2 split packages are referenced locally from the SDK repo clone.
 
+If you cloned this repository normally, initialize the SDK submodule first:
+
+```bash
+git submodule update --init --recursive
+```
+
 ```bash
 # From repository root
 git clone --depth 1 https://github.com/modelcontextprotocol/typescript-sdk.git _mcp-sdk
