@@ -22,8 +22,6 @@ import { McpServer, StdioServerTransport } from '@modelcontextprotocol/server';
 import * as z from 'zod/v4';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
-import * as os from 'node:os';
-import { fileURLToPath } from 'node:url';
 
 import { markdownToWordHtml } from './converter.js';
 
@@ -54,12 +52,16 @@ server.registerTool(
   {
     title: 'Convert Markdown to Word',
     description:
-      'Converts Markdown text into a Microsoft Word (.doc) document. ' +
-      'Supports GitHub Flavored Markdown: headings, bold/italic, code blocks ' +
-      'with language labels, tables, links, images, blockquotes, and lists. ' +
-      'Output uses Word 2016+ default formatting (Calibri, proper heading ' +
-      'colors, black table borders). Returns the saved file path and the ' +
-      'document encoded as base64.',
+      'Converts Markdown text into a Microsoft Word (.doc) document and ' +
+      'saves it to disk. Supports GitHub Flavored Markdown: headings, ' +
+      'bold/italic, code blocks with language labels, tables, links, images, ' +
+      'blockquotes, and lists. Output uses Word 2016+ default formatting ' +
+      '(Calibri, proper heading colors, black table borders). ' +
+      'The file is ALWAYS written to disk at the path specified by outputDir ' +
+      '(or the current working directory if omitted). Use forward slashes ' +
+      'for cross-platform paths (e.g. "C:/Users/me/Documents" or ' +
+      '"/home/me/Documents"). Returns the saved file path and the document ' +
+      'encoded as base64.',
     inputSchema: z.object({
       markdown: z
         .string()
@@ -74,7 +76,9 @@ server.registerTool(
         .string()
         .optional()
         .describe(
-          'Directory to write the .doc file into. Defaults to the OS temp directory.',
+          'Absolute or relative directory path to save the .doc file. ' +
+          'Works on Windows, macOS, and Linux — use forward slashes for ' +
+          'cross-platform compatibility. Defaults to the current working directory.',
         ),
     }),
     annotations: {
@@ -87,7 +91,7 @@ server.registerTool(
     try {
       const docTitle = filename ?? 'document';
       // Normalize paths for cross-platform (Windows + WSL/Unix)
-      const dir = normalizePath(outputDir ?? os.tmpdir());
+      const dir = normalizePath(outputDir ?? process.cwd());
 
       // Ensure output directory exists
       fs.mkdirSync(dir, { recursive: true });
