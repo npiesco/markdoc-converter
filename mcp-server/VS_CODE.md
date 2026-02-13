@@ -70,3 +70,64 @@ Choose the `args` path that matches what you opened in VS Code:
 ## DO NOT
 
 - Manually start the stdio server in a terminal when using VS Code MCP (VS Code manages stdin/stdout)
+
+---
+
+## Remote MCP Server (Vercel — Streamable HTTP)
+
+The MCP server is also deployed on Vercel as a serverless function.
+No local install or build required — just point your MCP client at the URL.
+
+### VS Code / Copilot Chat
+
+Create `.vscode/mcp.json`:
+
+```json
+{
+  "servers": {
+    "mark-my-words-down-remote": {
+      "type": "http",
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
+```
+
+### Cursor
+
+Create `.cursor/mcp.json`:
+
+```json
+{
+  "mcpServers": {
+    "mark-my-words-down": {
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
+```
+
+### Claude Desktop
+
+Add to your Claude Desktop config (`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "mark-my-words-down": {
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
+```
+
+### Remote Tool
+
+The remote server exposes the same `convert_markdown_to_word` tool.
+It does **not** write files to disk (serverless has no persistent storage) —
+instead it returns the Word document entirely as a base64 data URI.
+
+| Parameter  | Type   | Required | Description                                    |
+|------------|--------|----------|------------------------------------------------|
+| `markdown` | string | yes      | Markdown content to convert                    |
+| `filename` | string | no       | Document title without extension (default: `document`) |

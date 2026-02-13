@@ -119,16 +119,43 @@ The core conversion logic is already DOM-free. To run MCP fully client-side in a
 2. Use `WebStandardStreamableHTTPServerTransport`
 3. Host transport/runtime in service worker or browser-compatible environment
 
+## Remote Server (Vercel)
+
+The MCP server is also deployed on Vercel as a stateless serverless function
+using the Streamable HTTP transport. No local install required.
+
+**Endpoint:** `https://markdoc-converter.vercel.app/api/mcp`
+
+Connect from any MCP client (Cursor, VS Code, Claude Desktop):
+
+```json
+{
+  "mcpServers": {
+    "mark-my-words-down": {
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
+```
+
+The remote server exposes the same `convert_markdown_to_word` tool but returns
+the Word document purely as a base64 data URI (no filesystem writes in serverless).
+
+The Vercel API route lives at `api/mcp.ts` in the repository root and uses the
+[`mcp-handler`](https://www.npmjs.com/package/mcp-handler) package from the
+official Vercel MCP deployment guide.
+
 ## Tech Stack
 
-| Component | Technology |
-|-----------|------------|
-| Protocol  | MCP v2 |
-| SDK       | `@modelcontextprotocol/server` (2.0.0-alpha.0) |
+| Component  | Technology |
+|------------|------------|
+| Protocol   | MCP v2 |
+| SDK (local)| `@modelcontextprotocol/server` (2.0.0-alpha.0) |
+| SDK (remote)| `@modelcontextprotocol/sdk` via `mcp-handler` |
 | Validation | Zod v4 |
-| Markdown  | `marked` 14.x |
-| Transport | stdio |
-| Runtime   | Node.js 20+ |
+| Markdown   | `marked` 14.x |
+| Transport  | stdio (local) · Streamable HTTP (Vercel) |
+| Runtime    | Node.js 20+ |
 
 ## License
 
