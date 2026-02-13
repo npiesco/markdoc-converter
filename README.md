@@ -42,6 +42,32 @@ Mark My Words Down is a **100% client-side Markdown editor** that runs entirely 
 - **Export to Word**: One-click .doc file generation
 - **GFM Support**: Full GitHub Flavored Markdown compatibility
 
+## MCP Integration (Optional)
+
+This project also includes an MCP server in [mcp-server/README.md](mcp-server/README.md) with one tool:
+
+- `convert_markdown_to_word`
+
+Use it when you want LLM clients (VS Code MCP, Claude Desktop, etc.) to trigger Markdown → Word conversion via tool calls.
+
+### Remote MCP (Vercel)
+
+The MCP server is also deployed remotely on Vercel.
+
+**Endpoint:** `https://markdoc-converter.vercel.app/api/mcp`
+
+Use this in MCP client config:
+
+```json
+{
+  "mcpServers": {
+    "mark-my-words-down": {
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
+```
+
 ## Quick Start
 
 ### Prerequisites

@@ -1,0 +1,8 @@
+{
+  "servers": {
+    "mark-my-words-down": {
+      "type": "http",
+      "url": "https://markdoc-converter.vercel.app/api/mcp"
+    }
+  }
+}
