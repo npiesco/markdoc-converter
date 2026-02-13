@@ -7,10 +7,10 @@
  *
  *   https://markdoc-converter.vercel.app/api/mcp
  *
- * The tool does NOT write to the server filesystem (it's ephemeral and
- * useless to the user). Instead it returns base64-encoded .doc content and
- * instructs the LLM to save the file on the user's local machine at the
- * path described by outputDir + filename.
+ * The tool does NOT write to the server filesystem. It returns the .doc file
+ * as an MCP EmbeddedResource (type: "resource") with a base64 blob, mimeType,
+ * and a file:// URI. The MCP client handles file delivery natively — no LLM
+ * interpretation required.
  */
 
 import { z } from 'zod';
@@ -47,32 +47,25 @@ export async function convertMarkdownToWord(
     const base64 = Buffer.from(content, 'utf-8').toString('base64');
     const sizeKB = (Buffer.byteLength(content, 'utf-8') / 1024).toFixed(1);
 
-    // Build the target path hint for the LLM
+    // Build file:// URI for the target path on the user's machine
     const targetFile = `${docTitle}.doc`;
-    const savePath = targetDir ? `${targetDir}/${targetFile}` : targetFile;
-    const dirHint = targetDir
-      ? `\`${targetDir}\``
-      : 'the current working directory';
+    const fileUri = targetDir
+      ? `file:///${targetDir.replace(/^\//, '')}/${targetFile}`
+      : `file:///./${targetFile}`;
 
     return {
       content: [
         {
           type: 'text' as const,
-          text: [
-            `Word document generated successfully (${sizeKB} KB).`,
-            '',
-            `**Please save this file to the user's machine.**`,
-            `**Target path:** \`${savePath}\``,
-            `**Directory:** ${dirHint}`,
-            '',
-            `Write the base64-decoded content below to \`${savePath}\` on ` +
-              `the user's local filesystem. If the directory does not exist, ` +
-              `create it first.`,
-          ].join('\n'),
+          text: `Converted ${targetFile} (${sizeKB} KB).`,
         },
         {
-          type: 'text' as const,
-          text: `data:application/msword;base64,${base64}`,
+          type: 'resource' as const,
+          resource: {
+            uri: fileUri,
+            mimeType: 'application/msword',
+            blob: base64,
+          },
         },
       ],
     };
@@ -105,15 +98,9 @@ const handler = createMcpHandler(
           'with language labels, tables, links, images, blockquotes, and lists. ' +
           'Output uses Word 2016+ default formatting (Calibri, proper heading ' +
           'colors, black table borders).\n\n' +
-          'HOW IT WORKS:\n' +
-          '1. The server converts Markdown → Word HTML and returns TWO text blocks.\n' +
-          '2. Block 1: Instructions with the target file path on the USER\'s machine.\n' +
-          '3. Block 2: The full .doc content as a base64 data URI ' +
-          '(data:application/msword;base64,…).\n' +
-          '4. You MUST decode the base64 and write the bytes to the path from Block 1 ' +
-          'on the user\'s LOCAL filesystem. The server does NOT write any files.\n\n' +
-          'Use forward slashes for cross-platform paths ' +
-          '(e.g. "C:/Users/me/Documents").',
+          'Returns an EmbeddedResource with the .doc file as a base64 blob. ' +
+          'The MCP client handles file delivery automatically — no manual ' +
+          'decoding or saving needed.',
         inputSchema: {
           markdown: z
             .string()
@@ -128,13 +115,9 @@ const handler = createMcpHandler(
             .string()
             .optional()
             .describe(
-              'Directory path on the USER\'S local machine where the .doc file ' +
-              'should be saved (e.g. "C:/Users/me/Documents" or ' +
-              '"/home/me/Documents"). This is a path hint returned in the ' +
-              'response for you (the LLM) to use when writing the file — the ' +
-              'server itself does NOT touch the filesystem. Use forward slashes ' +
-              'for cross-platform compatibility. When omitted, the response ' +
-              'instructs you to save to the user\'s current working directory.',
+              'Directory path on the user\'s machine for the output file ' +
+              '(e.g. "C:/Users/me/Documents"). Used in the file:// URI of the ' +
+              'returned resource. When omitted, defaults to current directory.',
             ),
         },
       },

@@ -35,16 +35,18 @@ The file is written to `outputDir` on your machine and the tool returns both the
 
 #### Remote server (Vercel)
 
-The remote endpoint **does NOT write files**. It returns:
+The remote endpoint **does NOT write files**. It returns an **MCP EmbeddedResource**:
 
-| Block | Content |
-|-------|---------|
-| 1     | Instructions with the target path on the **user's** machine |
-| 2     | Full `.doc` as a `data:application/msword;base64,…` data URI |
+| Field | Value |
+|-------|-------|
+| `type` | `"resource"` |
+| `resource.blob` | Base64-encoded `.doc` content |
+| `resource.mimeType` | `application/msword` |
+| `resource.uri` | `file://` URI with `outputDir/filename.doc` |
 
-The LLM client (Copilot, Claude, Cursor, etc.) is responsible for decoding the base64 and writing the `.doc` file to the user's local filesystem at the path indicated in Block 1.
+Plus a short `text` block with the filename and size for LLM context.
 
-> **`outputDir` on the remote server** is a path hint for the LLM — it is *not* used server-side. If omitted, the LLM is instructed to save to the user's current working directory.
+The MCP client (VS Code, Cursor, Claude Desktop) handles file delivery automatically — it decodes the blob and saves to the URI. No manual steps.
 
 ## Quick Start
 
@@ -158,13 +160,9 @@ Connect from any MCP client (Cursor, VS Code, Claude Desktop):
 ```
 
 The remote server exposes the same `convert_markdown_to_word` tool but **never
-writes files to disk**. Instead it returns:
-
-1. **Block 1** — Save instructions with the target path on the user's machine.
-2. **Block 2** — The `.doc` content as a `data:application/msword;base64,…` URI.
-
-The LLM client decodes the base64 and writes the file to the user's local
-filesystem. See the [Tool](#tool) section above for the full flow.
+writes files to disk**. Instead it returns an MCP **EmbeddedResource** — the
+`.doc` as a base64 blob with `mimeType` and `file://` URI. The MCP client
+handles file delivery automatically. See the [Tool](#tool) section for details.
 
 The Vercel API route lives at `api/mcp.ts` in the repository root and uses the
 [`mcp-handler`](https://www.npmjs.com/package/mcp-handler) package from the

@@ -70,15 +70,16 @@ Use this in MCP client config:
 
 #### How the remote tool works
 
-The Vercel endpoint is a stateless serverless function — it **never writes files to disk**. Instead, the conversion round-trip works like this:
+The Vercel endpoint is a stateless serverless function — it **never writes files to disk**. Instead:
 
 1. **You (or an LLM) call** `convert_markdown_to_word` with your Markdown, an optional `filename`, and an optional `outputDir` (a path on *your* machine).
-2. **The server converts** Markdown → Word-compatible HTML, base64-encodes it, and returns **two text blocks**:
-   - **Block 1** — Instructions telling the LLM where to save (e.g. *"Please save to `C:/Users/you/Documents/my-notes.doc`"*).
-   - **Block 2** — The complete `.doc` content as a `data:application/msword;base64,…` data URI.
-3. **The LLM client** (Copilot, Claude, Cursor, etc.) reads the instructions, decodes the base64, and writes the `.doc` file to your local filesystem.
+2. **The server converts** Markdown → Word-compatible HTML and returns an **MCP EmbeddedResource** — a `type: "resource"` content block containing:
+   - `blob` — the `.doc` file as base64
+   - `mimeType` — `application/msword`
+   - `uri` — a `file://` URI pointing to `outputDir/filename.doc` on your machine
+3. **The MCP client** (VS Code, Cursor, Claude Desktop) handles file delivery automatically — it decodes the blob and saves the `.doc` to the URI. No LLM interpretation needed.
 
-> The `outputDir` parameter is a **hint for the LLM**, not the server. If omitted, the LLM is instructed to save to your current working directory.
+> Your MCP client does the saving — you just get a file.
 
 ## Quick Start
 
