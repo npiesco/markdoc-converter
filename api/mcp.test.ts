@@ -16,7 +16,7 @@
 import { describe, it, expect } from 'vitest';
 import * as fs from 'node:fs';
 
-import { convertMarkdownToWord } from './mcp.js';
+import { convertMarkdownToWord } from './mcp.ts';
 
 describe('Vercel MCP tool: convert_markdown_to_word', () => {
   it('does NOT write to the server filesystem', async () => {
@@ -104,5 +104,27 @@ describe('Vercel MCP tool: convert_markdown_to_word', () => {
     expect(textBlock.text).toMatch(/KB/i);
     // Should NOT contain save/write instructions — the client handles that
     expect(textBlock.text).not.toMatch(/save|write|decode|base64/i);
+  });
+
+  it('supports markdownPath as a URL in remote mode', async () => {
+    const result = await convertMarkdownToWord({
+      markdownPath: 'data:text/markdown;base64,IyBGcm9tIFVSTCBQYXRoCgp3b3Jrcy4=',
+      filename: 'url-path-test',
+    } as any);
+
+    const resourceBlock = result.content.find((c: any) => c.type === 'resource') as any;
+    const decoded = Buffer.from(resourceBlock.resource.blob, 'base64').toString('utf-8');
+    expect(decoded).toContain('From URL Path');
+  });
+
+  it('rejects local filesystem markdownPath in remote mode', async () => {
+    const result = await convertMarkdownToWord({
+      markdownPath: 'C:/Users/someone/notes.md',
+      filename: 'bad-remote-path',
+    } as any);
+
+    expect(result.isError).toBe(true);
+    const textBlock = result.content.find((c: any) => c.type === 'text') as any;
+    expect(textBlock.text).toMatch(/local path|remote server|cannot access/i);
   });
 });
