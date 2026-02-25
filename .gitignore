@@ -42,3 +42,6 @@ lerna-debug.log*
 Thumbs.db
 .vercel
 .env*.local
+
+# Local search index
+.vectordb/

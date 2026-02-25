@@ -21,9 +21,9 @@ Mark My Words Down is a **100% client-side Markdown editor** that runs entirely 
 
 **Everything happens in your browser. Nothing is sent anywhere. Ever.**
 
-- **No servers**: All Markdown parsing and Word conversion runs locally in JavaScript
+- **No servers**: All Markdown parsing and Word conversion runs locally in JavaScript via Web Workers
 - **No tracking**: Zero analytics, cookies, localStorage, or third-party services
-- **No network calls**: Works completely offline after initial page load
+- **No network calls**: Works completely offline after initial page load (Workbox precaches all assets)
 - **No data persistence**: Content exists only in memory and disappears when you close the tab
 - **No external dependencies**: All assets bundled locally, no CDN connections
 - **Progressive Web App**: Install on any device and use without internet connection
@@ -40,6 +40,8 @@ Mark My Words Down is a **100% client-side Markdown editor** that runs entirely 
 - **Dark Mode**: Eye-friendly dark theme for comfortable editing
 - **Split View**: Edit and preview side-by-side
 - **Export to Word**: One-click .doc file generation
+- **Web Worker Export**: Markdown→Word conversion runs off the main thread for responsive UI
+- **Installable PWA**: Workbox-powered service worker precaches all assets for true offline use
 - **GFM Support**: Full GitHub Flavored Markdown compatibility
 
 ## MCP Integration (Optional)
@@ -241,6 +243,11 @@ Exported Word documents include:
 - **Marked** 14.1 - Markdown parser
 - **Lucide React** 0.554 - Icon library
 
+**PWA & Offline:**
+
+- **vite-plugin-pwa** - Workbox service worker generation & manifest injection
+- **Web Workers** - Off-main-thread Markdown→Word conversion
+
 **Development:**
 
 - **PostCSS** - CSS processing
@@ -256,7 +263,8 @@ mark-my-words-down/
 │   ├── Preview.tsx          # Word preview renderer
 │   └── Toolbar.tsx          # App toolbar with controls
 ├── utils/
-│   └── exportUtils.ts       # Word document export logic
+│   ├── exportUtils.ts       # Word document export logic
+│   └── exportWorker.ts      # Web Worker for off-thread conversion
 ├── App.tsx                  # Main application component
 ├── index.tsx                # Application entry point
 ├── index.css                # Global styles and Tailwind
